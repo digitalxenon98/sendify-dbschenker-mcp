@@ -13,7 +13,7 @@ An MCP (Model Context Protocol) server that tracks DB Schenker shipments by refe
 
 1. **Clone or download this repository**
    ```bash
-   git clone [<repository-url>](https://github.com/digitalxenon98/sendify-dbschenker-mcp)
+   git clone https://github.com/digitalxenon98/sendify-dbschenker-mcp
    cd sendify-dbschenker-mcp
    ```
 
