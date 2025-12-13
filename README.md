@@ -1,6 +1,7 @@
 # DB Schenker Shipment Tracker MCP Server
 
 An MCP (Model Context Protocol) server that tracks DB Schenker shipments by reference number, providing structured shipment information including sender/receiver details, package information, and complete tracking history.
+The DB Schenker public API is rate-limited. This implementation handles rate limits reliably and returns structured error messages when limits are encountered.
 
 ## Setup Instructions
 
