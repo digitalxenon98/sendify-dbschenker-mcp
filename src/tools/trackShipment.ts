@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { CaptchaBlockedError, fetchShipmentDetailsLandSE, fetchTripLandSE, searchShipment, } from "../services/dbSchenkerClient.js";
+import { CaptchaBlockedError, fetchShipmentDetailsLandSE, fetchTripLandSE, searchShipment, type ShipmentDetails, type TripResponse, } from "../services/dbSchenkerClient.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 // In-memory cache for CAPTCHA-blocked results, keyed by tracking reference.
 // This prevents us from repeatedly calling the upstream endpoint when we already
 // know that the request will be rejected by browser-level CAPTCHA.
@@ -12,14 +13,14 @@ const inputSchema = z.object({
         .min(3)
         .describe("DB Schenker tracking reference number (e.g. 1806203236)"),
 });
-function normalizeSenderReceiver(details) {
+function normalizeSenderReceiver(details: ShipmentDetails) {
     const loc = details?.location ?? {};
     // Public API often exposes location but not personal names/addresses.
     const sender = loc.collectFrom ?? loc.shipperPlace ?? null;
     const receiver = loc.deliverTo ?? loc.consigneePlace ?? null;
     return { sender, receiver };
 }
-function normalizePackages(details) {
+function normalizePackages(details: ShipmentDetails) {
     const goods = details?.goods ?? {};
     const packages = Array.isArray(details?.packages) ? details.packages : [];
     return {
@@ -30,10 +31,10 @@ function normalizePackages(details) {
             dimensions: goods?.dimensions ?? [],
             loadingMeters: goods?.loadingMeters ?? null,
         },
-        packages: packages.map((p) => ({
+        packages: packages.map((p: { id?: string; events?: Array<{ code?: string; date?: string; location?: string; countryCode?: string }> }) => ({
             id: p?.id ?? null,
             events: Array.isArray(p?.events)
-                ? p.events.map((e) => ({
+                ? p.events.map((e: { code?: string; date?: string; location?: string; countryCode?: string }) => ({
                     code: e?.code ?? null,
                     date: e?.date ?? null,
                     location: e?.location ?? null,
@@ -43,9 +44,9 @@ function normalizePackages(details) {
         })),
     };
 }
-function normalizeTrackingHistory(details, trip) {
+function normalizeTrackingHistory(details: ShipmentDetails, trip: TripResponse) {
     const events = Array.isArray(details?.events) ? details.events : [];
-    const history = events.map((e) => ({
+    const history = events.map((e: { code?: string; date?: string; comment?: string | null; location?: { name?: string; code?: string; countryCode?: string } | null; reasons?: Array<{ code?: string; description?: string | null }> | null }) => ({
         code: e?.code ?? null,
         timestamp: e?.date ?? null,
         description: e?.comment ?? null,
@@ -53,14 +54,14 @@ function normalizeTrackingHistory(details, trip) {
         locationCode: e?.location?.code ?? null,
         countryCode: e?.location?.countryCode ?? null,
         reasons: Array.isArray(e?.reasons)
-            ? e.reasons.map((r) => ({
+            ? e.reasons.map((r: { code?: string; description?: string | null }) => ({
                 code: r?.code ?? null,
                 description: r?.description ?? null,
             }))
             : [],
     }));
     const tripPoints = Array.isArray(trip?.trip)
-        ? trip.trip.map((t) => ({
+        ? trip.trip.map((t: { lastEventCode?: string; lastEventDate?: string; latitude?: number; longitude?: number }) => ({
             code: t?.lastEventCode ?? null,
             timestamp: t?.lastEventDate ?? null,
             latitude: t?.latitude ?? null,
@@ -69,12 +70,12 @@ function normalizeTrackingHistory(details, trip) {
         : [];
     return { history, tripPoints };
 }
-export function registerTrackShipmentTool(server) {
+export function registerTrackShipmentTool(server: McpServer) {
     server.registerTool("track_shipment", {
         title: "Track shipment",
         description: "Track a DB Schenker shipment by reference number and return structured shipment details and tracking history.",
         inputSchema,
-    }, async ({ reference }) => {
+    }, async ({ reference }: { reference: string }) => {
         // Fast-path: if we already know this reference is blocked by CAPTCHA and the
         // information is still fresh, return the cached structured response without
         // calling the upstream service again.
