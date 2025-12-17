@@ -71,6 +71,15 @@ export class DbSchenkerAdapter implements CarrierAdapter {
     readonly carrier = "db-schenker";
 
     async track(reference: string): Promise<TrackingResult> {
+        // Validate reference format: must be numeric and at least 8 digits
+        if (!/^\d+$/.test(reference) || reference.length < 8) {
+            return {
+                ok: false,
+                error: "INVALID_REFERENCE_FORMAT",
+                message: "Reference does not match expected DB Schenker format.",
+                reference,
+            };
+        }
         // Fast-path: if we already know this reference is blocked by CAPTCHA and the
         // information is still fresh, return the cached structured response without
         // calling the upstream service again.
