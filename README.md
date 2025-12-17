@@ -4,7 +4,14 @@ An MCP (Model Context Protocol) server that tracks DB Schenker shipments by refe
 
 ## CAPTCHA Notice
 
-The DB Schenker tracking endpoint is protected by browser-level CAPTCHA. Server-side requests are intentionally treated as operating against a hard system boundary rather than a generic public API. When CAPTCHA blocking is detected, the system fails fast with a structured error response rather than attempting retries or workarounds.
+The DB Schenker tracking endpoint is protected by browser-level CAPTCHA. Server-side requests are intentionally treated as operating against a hard system boundary rather than a generic public API. 
+
+When CAPTCHA blocking is detected, the system fails fast with a structured error response
+rather than attempting retries or workarounds. To avoid unnecessary CAPTCHA-triggering
+requests, the server performs a lightweight, client-side heuristic validation to reject
+obviously malformed references before making upstream requests. This validation does not
+reflect DB Schenker's internal validation logic.
+
 
 For detailed information about CAPTCHA mechanics, ethical boundaries, retry semantics, and production considerations, see [System Boundaries & Technical Considerations](docs/system-boundaries.md).
 
@@ -119,6 +126,8 @@ You can test with these reference numbers:
 - `1806272330`
 - `1806271886`
 
+**Note:** Even valid-looking reference numbers may result in a CAPTCHA-blocked response when queried server-side, as browser-level CAPTCHA enforcement occurs before upstream validation.
+
 ### Expected Response Format
 
 **Success Response:**
@@ -140,7 +149,17 @@ You can test with these reference numbers:
 }
 ```
 
-**Error Response (Not Found):**
+**Error Response (Invalid Reference Format):**
+```json
+{
+  "ok": false,
+  "error": "INVALID_REFERENCE_FORMAT",
+  "message": "Reference does not match expected DB Schenker format.",
+  "reference": "invalid-ref"
+}
+```
+
+**Error Response (Not Found — rarely observable):**
 ```json
 {
   "ok": false,
@@ -149,6 +168,8 @@ You can test with these reference numbers:
   "reference": "1806203236"
 }
 ```
+
+**Note:** Due to browser-level CAPTCHA enforcement occurring before upstream validation, NOT_FOUND responses may not be observable in practice for server-side requests.
 
 **Error Response (API Error):**
 ```json
