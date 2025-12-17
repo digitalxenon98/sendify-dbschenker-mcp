@@ -55,13 +55,6 @@ The implementation includes retry mechanisms for transient server errors, but di
 
 By differentiating these cases, the system remains resilient while respecting upstream constraints and usage boundaries.
 
-## Production Considerations
-
-A real production solution would require one of the following approaches:
-
-- An official DB Schenker API with proper authentication
-- A partner integration program with DB Schenker
-- Explicit user-initiated browser flows where users solve CAPTCHA challenges themselves
 
 ## Local Reference Format Validation
 
@@ -84,4 +77,11 @@ If the reference fails this check, the system returns a structured error respons
 }
 ```
 
+## Production Considerations
+
+A real production solution would require one of the following approaches:
+
+- An official DB Schenker API with proper authentication
+- A partner integration program with DB Schenker
+- Explicit user-initiated browser flows where users solve CAPTCHA challenges themselves
 
