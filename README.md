@@ -251,7 +251,20 @@ You can test with these reference numbers:
 }
 ```
 
-**Error Response (CAPTCHA Blocked):**
+**Error Response (CAPTCHA Solution Invalid - 422):**
+```json
+{
+  "ok": false,
+  "error": "CAPTCHA_SOLUTION_INVALID",
+  "message": "The Captcha-Solution header was rejected by the server. The solution may have expired.",
+  "reference": "1806203236",
+  "details": "HTTP 422 Unprocessable Entity :: Invalid solution",
+  "hint": "The Captcha-Solution header is time-sensitive and expires quickly. The server will automatically retry with a fresh solution.",
+  "retryable": true
+}
+```
+
+**Error Response (CAPTCHA Blocked - 429):**
 ```json
 {
   "status": "blocked",
@@ -271,19 +284,20 @@ You can test with these reference numbers:
 To verify that CAPTCHA solving works correctly, you can use the test script:
 
 ```bash
-# Run with debug output to see CAPTCHA solving in action
-DEBUG_CAPTCHA=1 npm run test-captcha-flow
+npm run test-captcha-flow
 ```
 
 This will:
 1. Make a real API request to DB Schenker
 2. Automatically solve any CAPTCHA challenge encountered
-3. Display debug information about the solving process
+3. Display debug information about the solving process (automatically enabled)
 4. Show whether the request succeeded
 
 **Expected output:**
 - `[CAPTCHA] Puzzle solved in Xms` - Shows CAPTCHA was solved successfully
 - `✅ Request succeeded!` - Shows the solution worked and data was retrieved
+
+**Note:** Debug output is automatically enabled by the test script. You don't need to set `DEBUG_CAPTCHA=1` manually.
 
 ### Manual Testing (Advanced)
 

@@ -1,5 +1,7 @@
 # Implementation Summary
 
+**⚠️ Note:** This document describes both the current implementation (pure JavaScript CAPTCHA solving) and a planned browser-worker alternative. The current production implementation uses pure JavaScript and does not require browser automation.
+
 ## 1. Architectural Summary
 
 ### Challenge-Response Mechanism
@@ -11,7 +13,7 @@ DB Schenker's tracking endpoint uses a **browser-bound challenge-response mechan
 - **Validation:** Server validates solution and returns `200 OK` or `422 Invalid solution`
 - **Session-Dependent:** Solutions are unique per request and expire quickly
 
-This is **not** a traditional API key flow - it requires browser execution to generate valid solutions.
+**Current Implementation:** Our implementation uses a pure JavaScript proof-of-work algorithm that solves CAPTCHA puzzles server-side without requiring browser execution. The algorithm is implemented in `src/services/captchaSolver.ts`.
 
 ## 2. Error Handling Implementation
 

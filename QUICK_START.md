@@ -13,13 +13,15 @@ Replace `/path/to/sendify-dbschenker-mcp` with the actual path to your project d
 ### Step 2: Test CAPTCHA Flow (Recommended First)
 ```bash
 # This will make a real API request and show you if CAPTCHA solving works
-DEBUG_CAPTCHA=1 npm run test-captcha-flow
+npm run test-captcha-flow
 ```
 
 **What to look for:**
 - `[CAPTCHA] Puzzle solved in Xms` - Shows CAPTCHA was solved
 - `✅ Request succeeded!` - Shows the solution worked
 - If you see errors, check the troubleshooting section below
+
+**Note:** Debug output is automatically enabled - you don't need to set `DEBUG_CAPTCHA=1`.
 
 ### Step 3: Test with MCP Inspector
 
@@ -76,7 +78,7 @@ When you call `track_shipment`:
 To ensure CAPTCHA solving is working:
 
 - [ ] Run `npm run test-captcha-flow` - should succeed
-- [ ] Check for `[CAPTCHA] Puzzle solved` message (if DEBUG_CAPTCHA=1)
+- [ ] Check for `[CAPTCHA] Puzzle solved` message (debug output is automatically enabled)
 - [ ] MCP Inspector can call `track_shipment` successfully
 - [ ] No "Invalid solution" (422) errors
 - [ ] No persistent 429 errors after solving
@@ -94,9 +96,11 @@ To ensure CAPTCHA solving is working:
 
 ### Issue: Want to see CAPTCHA solving in action
 ```bash
-# Enable debug logging
-DEBUG_CAPTCHA=1 npm run test-captcha-flow
+# Debug logging is automatically enabled
+npm run test-captcha-flow
 ```
+
+**Note:** The test script automatically enables debug output. You don't need to set `DEBUG_CAPTCHA=1` manually.
 
 ## 📝 Example Test Cases
 

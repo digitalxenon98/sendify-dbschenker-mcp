@@ -18,11 +18,12 @@ If the required `Captcha-Solution` header is missing, the upstream service respo
 
 ### CAPTCHA Detection & Handling
 
-- **CAPTCHA Detection**: The client detects CAPTCHA blocking by checking for HTTP 429 responses combined with the presence of `Captcha-Puzzle` headers.
-- **Non-Retryable Failures**: CAPTCHA-related HTTP 429 responses are treated as non-retryable. No exponential backoff or retry logic is applied, as retrying would not resolve the missing CAPTCHA solution.
-- **Fail Fast**: The client fails fast instead of retrying or backing off when CAPTCHA is detected.
-- **Structured Error Response**: The limitation is surfaced clearly through structured error responses with `status: "blocked"` and `retryable: false`, clearly distinguishing this from transient failures.
-- **Failure Caching**: CAPTCHA-blocked results are cached for 60 seconds to avoid repeated upstream requests for the same reference number.
+- **CAPTCHA Detection**: The client detects CAPTCHA challenges by checking for HTTP 429 responses combined with the presence of `Captcha-Puzzle` headers.
+- **Automatic Solving**: When a CAPTCHA challenge is detected, the server automatically solves it using a proof-of-work algorithm and retries the request with the solution. This happens transparently without user intervention.
+- **Error Handling**: If CAPTCHA solving fails or the solution is rejected (HTTP 422), the system returns structured error responses:
+  - `CAPTCHA_SOLUTION_INVALID` (422): Solution was rejected (expired/invalid) - retryable
+  - `status: "blocked"` (429): CAPTCHA solving failed or puzzle couldn't be solved - non-retryable
+- **Failure Caching**: CAPTCHA-blocked results (when solving fails) are cached for 60 seconds to avoid repeated upstream requests for the same reference number.
 
 ## CAPTCHA Solving
 
@@ -40,7 +41,7 @@ The implementation includes retry mechanisms for transient server errors, but di
 - **Exponential Backoff for Transient Errors**: Transient server errors (HTTP 5xx) are retried using exponential backoff, providing up to 3 retry attempts with increasing delays. This applies only to genuine transient failures.
 
 - **CAPTCHA Blocking vs. Rate Limiting**: HTTP 429 responses are handled differently based on their cause:
-  - **CAPTCHA-related HTTP 429**: Detected and treated as a hard, non-retryable boundary. The client fails fast and returns a structured "blocked" response.
+  - **CAPTCHA-related HTTP 429**: Detected and automatically solved. If solving fails, returns a structured "blocked" response (non-retryable).
   - **True rate limiting**: If a 429 occurs without CAPTCHA headers (unlikely but possible), it may be retried with exponential backoff as a transient rate limit.
 
 - **Response Caching**: Successful responses are cached in memory for a short period (currently 60 seconds) to reduce upstream load and avoid unnecessary repeated calls.

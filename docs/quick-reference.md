@@ -1,5 +1,7 @@
 # Quick Reference: Implementation Locations
 
+**⚠️ Note:** This document contains references to a browser-worker implementation that is not currently used. The current implementation uses pure JavaScript CAPTCHA solving (see `src/services/captchaSolver.ts`) without browser automation.
+
 ## Error Handling (✅ Completed)
 
 ### HTTP 422 "Invalid solution" Detection
