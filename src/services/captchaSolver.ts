@@ -1,7 +1,7 @@
 /**
  * CAPTCHA Solver Service
  * 
- * Based on the algorithm extracted from main.*.js bundle.
+ * Based on the algorithm extracted from main.6774dda48fc0a866.js bundle.
  * The algorithm uses:
  * - SHA-256 hashing (double hash)
  * - BigInt arithmetic for target calculation
