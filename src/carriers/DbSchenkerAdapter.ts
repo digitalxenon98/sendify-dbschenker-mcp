@@ -9,9 +9,21 @@ const BLOCKED_TTL_MS = 60 * 1000; // 60 seconds
 
 function normalizeSenderReceiver(details: ShipmentDetails) {
     const loc = details?.location ?? {};
-    // Public API often exposes location but not personal names/addresses.
-    const sender = loc.collectFrom ?? loc.shipperPlace ?? null;
-    const receiver = loc.deliverTo ?? loc.consigneePlace ?? null;
+    // Handle both old format (shipperPlace/consigneePlace) and new format (shipper/consignee)
+    const sender = loc.collectFrom ?? loc.shipperPlace ?? 
+        (loc.shipper ? {
+            countryCode: loc.shipper.countryCode,
+            country: loc.shipper.countryName,
+            city: loc.shipper.cityName,
+            postCode: loc.shipper.zipCode,
+        } : null);
+    const receiver = loc.deliverTo ?? loc.consigneePlace ?? 
+        (loc.consignee ? {
+            countryCode: loc.consignee.countryCode,
+            country: loc.consignee.countryName,
+            city: loc.consignee.cityName,
+            postCode: loc.consignee.zipCode,
+        } : null);
     return { sender, receiver };
 }
 
@@ -102,25 +114,41 @@ export class DbSchenkerAdapter implements CarrierAdapter {
             }
             // 2) Details + Trip in parallel (optional - may fail with 404)
             // If these fail, we'll still return the search result data
+            // Use Promise.allSettled to handle each request independently
             let details: ShipmentDetails | null = null;
             let trip: TripResponse | null = null;
             
-            try {
-                [details, trip] = await Promise.all([
-                    fetchShipmentDetailsLandSE(stt),
-                    fetchTripLandSE(stt),
-                ]);
-            } catch (error) {
-                // If details/trip fail (e.g., 404), we'll still return search result
-                // Log the error but don't fail the entire request
+            const [detailsResult, tripResult] = await Promise.allSettled([
+                fetchShipmentDetailsLandSE(stt),
+                fetchTripLandSE(stt),
+            ]);
+            
+            // Handle details result
+            if (detailsResult.status === "fulfilled") {
+                details = detailsResult.value;
+            } else {
+                const error = detailsResult.reason;
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                if (errorMsg.includes("404") || errorMsg.includes("Not Found")) {
-                    // Details/trip endpoints not available for this shipment - that's OK
-                    // We'll return what we have from the search result
-                } else {
-                    // Re-throw other errors (CAPTCHA, network, etc.)
+                // Only ignore 404 errors - other errors (CAPTCHA, network) should be re-thrown
+                if (!errorMsg.includes("404") && !errorMsg.includes("Not Found")) {
+                    // Re-throw non-404 errors (CAPTCHA, network, etc.)
                     throw error;
                 }
+                // 404 is expected for some shipments - details endpoint may not exist
+            }
+            
+            // Handle trip result
+            if (tripResult.status === "fulfilled") {
+                trip = tripResult.value;
+            } else {
+                const error = tripResult.reason;
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                // Only ignore 404 errors - other errors (CAPTCHA, network) should be re-thrown
+                if (!errorMsg.includes("404") && !errorMsg.includes("Not Found")) {
+                    // Re-throw non-404 errors (CAPTCHA, network, etc.)
+                    throw error;
+                }
+                // 404 is expected for some shipments - trip endpoint may not exist
             }
             
             const { sender, receiver } = details ? normalizeSenderReceiver(details) : { sender: null, receiver: null };

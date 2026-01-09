@@ -394,6 +394,20 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
       deliverTo?: { countryCode?: string; country?: string; city?: string; postCode?: string };
       shipperPlace?: { countryCode?: string; country?: string; city?: string; postCode?: string };
       consigneePlace?: { countryCode?: string; country?: string; city?: string; postCode?: string };
+      shipper?: { 
+        companyName?: string | null;
+        countryCode?: string;
+        zipCode?: string;
+        cityName?: string;
+        countryName?: string;
+      };
+      consignee?: {
+        companyName?: string | null;
+        countryCode?: string;
+        zipCode?: string;
+        cityName?: string;
+        countryName?: string;
+      };
       dispatchingOffice?: { countryCode?: string; country?: string; city?: string };
       receivingOffice?: { countryCode?: string; country?: string; city?: string };
     } | null;
@@ -416,13 +430,13 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
   }
   
   export async function fetchShipmentDetailsLandSE(stt: string): Promise<ShipmentDetails> {
-    // Matches what you observed: /shipments/land/LandStt:SE:<STT>
-    const url = `${BASE}/shipments/land/${encodeURIComponent(`LandStt:SE:${stt}`)}`;
+    // Use the ID format from search results: LandStt:<STT> (without :SE:)
+    const url = `${BASE}/shipments/land/${encodeURIComponent(`LandStt:${stt}`)}`;
     return fetchJson<ShipmentDetails>(url);
   }
   
   export async function fetchTripLandSE(stt: string): Promise<TripResponse> {
-    const url = `${BASE}/shipments/land/${encodeURIComponent(`LandStt:SE:${stt}`)}/trip`;
+    const url = `${BASE}/shipments/land/${encodeURIComponent(`LandStt:${stt}`)}/trip`;
     return fetchJson<TripResponse>(url);
   }
   
