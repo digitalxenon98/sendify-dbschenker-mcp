@@ -93,6 +93,18 @@ export class DbSchenkerAdapter implements CarrierAdapter {
         try {
             // 1) Search -> get STT
             const search = await searchShipment(reference);
+            
+            // Check if API returned an error message
+            if (search?.message || search?.code) {
+                return {
+                    ok: false,
+                    error: "NOT_FOUND",
+                    message: search.message || "No shipment found for that reference number.",
+                    reference,
+                    ...(search.code && { code: search.code }),
+                };
+            }
+            
             if (!search?.result?.length) {
                 return {
                     ok: false,

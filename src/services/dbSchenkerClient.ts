@@ -168,6 +168,31 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
               throw new Error(`HTTP 404 Not Found${errorText ? ` :: ${errorText.substring(0, 200)}` : ""}`);
             }
 
+            // 400 is a valid API error response (bad request) - not a CAPTCHA failure
+            // The CAPTCHA was solved successfully, but the request itself is invalid
+            if (retryRes.status === 400) {
+              let errorData: { message?: string; code?: string } | null = null;
+              let errorText = "";
+              try {
+                const contentType = retryRes.headers.get("content-type");
+                if (contentType?.includes("application/json")) {
+                  errorData = await retryRes.json() as { message?: string; code?: string };
+                  errorText = JSON.stringify(errorData);
+                } else {
+                  errorText = await retryRes.text();
+                }
+              } catch {
+                // Ignore parsing errors
+              }
+              
+              const error = new Error(`HTTP 400 Bad Request${errorText ? ` :: ${errorText.substring(0, 200)}` : ""}`);
+              // Attach API error data so it can be extracted by the caller
+              if (errorData) {
+                (error as Error & { apiError?: { message?: string; code?: string } }).apiError = errorData;
+              }
+              throw error;
+            }
+
             // Other error status - throw generic error
             let errorText = "";
             try {
@@ -179,6 +204,11 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
           } catch (error) {
             // If solving fails, check if it's already a known error type
             if (error instanceof CaptchaSolutionInvalidError || error instanceof CaptchaBlockedError) {
+              throw error;
+            }
+
+            // If the error already has apiError attached (from 400 handling above), don't wrap it
+            if (error instanceof Error && "apiError" in error) {
               throw error;
             }
 
@@ -273,16 +303,31 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
         // Handle other non-OK responses (should not reach here for 429, 422, or 5xx,
         // as those are handled above).
         if (!res.ok) {
+          // Try to parse as JSON first (API might return structured error)
+          let errorData: { message?: string; code?: string } | null = null;
           let errorText = "";
+          
           try {
-            errorText = await res.text();
+            const contentType = res.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              errorData = await res.json() as { message?: string; code?: string };
+              errorText = JSON.stringify(errorData);
+            } else {
+              errorText = await res.text();
+            }
           } catch {
-            // Ignore text parsing errors
+            // Ignore parsing errors
           }
+          
           const errorMsg = `HTTP ${res.status} ${res.statusText} for ${url}${
             errorText ? ` :: ${errorText.substring(0, 200)}` : ""
           }`;
           lastErr = new Error(errorMsg);
+          
+          // For 4xx errors with structured error data, attach it to the error
+          if (res.status >= 400 && res.status < 500 && errorData) {
+            (lastErr as Error & { apiError?: { message?: string; code?: string } }).apiError = errorData;
+          }
 
           // Don't retry on client errors (4xx), only on server errors (5xx).
           // HTTP 429 and 422 are already handled above.
@@ -343,7 +388,7 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
   }
   
   export type ShipmentSearchResult = {
-    result: Array<{
+    result?: Array<{
       id: string; // e.g. "LandStt:SENYB550963155"
       stt: string; // e.g. "SENYB550963155"
       transportMode: "LAND" | string;
@@ -355,6 +400,9 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
       endDate?: string | null;
     }>;
     warnings?: unknown[];
+    // Error response fields
+    message?: string;
+    code?: string;
   };
   
   export type ShipmentDetails = {
@@ -426,7 +474,23 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
   
   export async function searchShipment(reference: string): Promise<ShipmentSearchResult> {
     const url = `${BASE}/shipments?query=${encodeURIComponent(reference)}`;
-    return fetchJson<ShipmentSearchResult>(url);
+    try {
+      return await fetchJson<ShipmentSearchResult>(url);
+    } catch (error) {
+      // If the error has API error data attached, return it as a search result
+      // This allows the adapter to handle structured error messages from the API
+      if (error instanceof Error && "apiError" in error) {
+        const apiError = (error as Error & { apiError?: { message?: string; code?: string } }).apiError;
+        if (apiError) {
+          return {
+            message: apiError.message,
+            code: apiError.code,
+          } as ShipmentSearchResult;
+        }
+      }
+      // Otherwise, re-throw the error
+      throw error;
+    }
   }
   
   export async function fetchShipmentDetailsLandSE(stt: string): Promise<ShipmentDetails> {
