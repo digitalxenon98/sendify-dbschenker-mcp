@@ -46,9 +46,9 @@ The system distinguishes between different CAPTCHA-related errors:
 - **HTTP 422 "Invalid solution"**: The `Captcha-Solution` header was rejected (expired/invalid)
 - **HTTP 429 without puzzle**: Rate limiting (retryable)
 
-For detailed information about CAPTCHA mechanics, ethical boundaries, retry semantics, and production considerations, see:
-- [System Boundaries & Technical Considerations](docs/system-boundaries.md)
-- [CAPTCHA Architecture](docs/captcha-architecture.md)
+For detailed information about CAPTCHA mechanics and algorithm implementation, see:
+- [CAPTCHA Algorithm: Background and Implementation](docs/captcha-algorithm-usage.md)
+- [Testing CAPTCHA Flow](docs/testing-captcha-flow.md)
 
 ## Setup Instructions
 
@@ -295,7 +295,7 @@ This will:
 
 **Expected output:**
 - `[CAPTCHA] Puzzle solved in Xms` - Shows CAPTCHA was solved successfully
-- `✅ Request succeeded!` - Shows the solution worked and data was retrieved
+- `Request succeeded!` - Shows the solution worked and data was retrieved
 
 **Note:** Debug output is automatically enabled by the test script. You don't need to set `DEBUG_CAPTCHA=1` manually.
 

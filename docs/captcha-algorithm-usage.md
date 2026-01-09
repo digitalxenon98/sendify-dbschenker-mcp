@@ -8,7 +8,7 @@ The DB Schenker tracking endpoint (`/nges-portal/api/public/tracking-public/`) i
 
 When users access the DB Schenker tracking page in a browser, a JavaScript bundle (`main.*.js`) is loaded that handles CAPTCHA solving automatically. The bundle:
 
-1. Intercepts API requests (via `fetch` or `XMLHttpRequest` overrides)
+1. Observes API requests and responses in the browser JavaScript runtime and handles CAPTCHA challenges before retrying requests.
 2. Detects `Captcha-Puzzle` headers in HTTP 429 responses
 3. Solves the puzzle using a proof-of-work algorithm
 4. Generates a `Captcha-Solution` header
@@ -64,7 +64,7 @@ The algorithm implements a proof-of-work system:
 1. **Extract puzzle data**: Parse JWT tokens from `Captcha-Puzzle` header, decode the `puzzle` field from each JWT payload
 2. **Calculate target**: Compute the target threshold from puzzle bytes 13 and 14
 3. **Search for nonce**: Iterate through nonce values starting from 0
-4. **Compute hash**: For each nonce, compute `double SHA-256(nonce || puzzle[0:32])`
+4. **Compute hash**: For each nonce, compute `double SHA-256(puzzle[0:32] || nonce)`
 5. **Check threshold**: If the hash value (as BigInt) is less than the target, the nonce is valid
 6. **Encode solution**: Convert the nonce to 8-byte little-endian format, base64-encode it
 7. **Format response**: Create JSON array with JWT-solution pairs, base64-encode the entire array
@@ -72,7 +72,7 @@ The algorithm implements a proof-of-work system:
 The hash computation uses:
 - Input: 40 bytes total (32 bytes of puzzle data + 8 bytes of nonce)
 - Algorithm: Double SHA-256 (SHA-256 applied twice)
-- Comparison: Hash value (interpreted as little-endian BigInt) must be less than target
+- Comparison: Hash value (interpreted as little-endian BigInt using big-endian byte order) must be less than target
 
 ## Node.js Implementation
 
