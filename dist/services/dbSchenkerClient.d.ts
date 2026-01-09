@@ -13,6 +13,16 @@ export declare class CaptchaBlockedError extends Error {
         hasCaptchaPuzzleHeader: boolean;
     });
 }
+export declare class CaptchaSolutionInvalidError extends Error {
+    readonly status = 422;
+    readonly retryable = false;
+    readonly url: string;
+    constructor(params: {
+        url: string;
+        message?: string;
+    });
+}
+export declare function fetchJson<T>(url: string, opts?: FetchJsonOptions): Promise<T>;
 export type ShipmentSearchResult = {
     result: Array<{
         id: string;

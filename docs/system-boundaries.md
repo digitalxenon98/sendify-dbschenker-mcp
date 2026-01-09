@@ -24,16 +24,14 @@ If the required `Captcha-Solution` header is missing, the upstream service respo
 - **Structured Error Response**: The limitation is surfaced clearly through structured error responses with `status: "blocked"` and `retryable: false`, clearly distinguishing this from transient failures.
 - **Failure Caching**: CAPTCHA-blocked results are cached for 60 seconds to avoid repeated upstream requests for the same reference number.
 
-## Ethical Boundaries
+## CAPTCHA Solving
 
-This implementation explicitly respects CAPTCHA protections as a system boundary:
+The current implementation automatically solves CAPTCHA puzzles using a proof-of-work algorithm:
 
-- **No CAPTCHA Bypass**: No attempt is made to bypass, automate, or solve CAPTCHA challenges.
-- **No Browser Automation**: No browser automation tools (Playwright, Puppeteer, Selenium) are used.
-- **No Token Replay**: No hard-coded tokens or header replay mechanisms are employed.
-- **Fail Fast**: The system fails gracefully and immediately when CAPTCHA blocking is detected, rather than attempting workarounds.
-
-This approach reflects correct and ethical engineering practice and avoids interacting with the upstream service in unsupported or brittle ways.
+- **Automatic CAPTCHA Solving**: When a CAPTCHA challenge is detected (HTTP 429 with `Captcha-Puzzle` header), the server automatically solves it using a proof-of-work algorithm and retries the request with the solution.
+- **No Browser Automation**: The server does not use any browser automation tools. CAPTCHA solving is done purely algorithmically using JavaScript.
+- **Transparent Operation**: CAPTCHA solving happens automatically and transparently - no manual intervention is required.
+- **Graceful Error Handling**: If CAPTCHA solving fails or solutions are rejected, the system returns structured error responses.
 
 ## Retry Semantics & Rate Limiting
 

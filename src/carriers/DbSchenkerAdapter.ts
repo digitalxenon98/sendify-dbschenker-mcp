@@ -1,4 +1,4 @@
-import { CaptchaBlockedError, fetchShipmentDetailsLandSE, fetchTripLandSE, searchShipment, type ShipmentDetails, type TripResponse, } from "../services/dbSchenkerClient.js";
+import { CaptchaBlockedError, CaptchaSolutionInvalidError, fetchShipmentDetailsLandSE, fetchTripLandSE, searchShipment, type ShipmentDetails, type TripResponse, } from "../services/dbSchenkerClient.js";
 import type { CarrierAdapter, TrackingResult } from "./CarrierAdapter.js";
 
 // In-memory cache for CAPTCHA-blocked results, keyed by tracking reference.
@@ -100,14 +100,32 @@ export class DbSchenkerAdapter implements CarrierAdapter {
                     searchResult: top,
                 };
             }
-            // 2) Details + Trip in parallel
-            const [details, trip] = await Promise.all([
-                fetchShipmentDetailsLandSE(stt),
-                fetchTripLandSE(stt),
-            ]);
-            const { sender, receiver } = normalizeSenderReceiver(details);
-            const pkg = normalizePackages(details);
-            const tracking = normalizeTrackingHistory(details, trip);
+            // 2) Details + Trip in parallel (optional - may fail with 404)
+            // If these fail, we'll still return the search result data
+            let details: ShipmentDetails | null = null;
+            let trip: TripResponse | null = null;
+            
+            try {
+                [details, trip] = await Promise.all([
+                    fetchShipmentDetailsLandSE(stt),
+                    fetchTripLandSE(stt),
+                ]);
+            } catch (error) {
+                // If details/trip fail (e.g., 404), we'll still return search result
+                // Log the error but don't fail the entire request
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                if (errorMsg.includes("404") || errorMsg.includes("Not Found")) {
+                    // Details/trip endpoints not available for this shipment - that's OK
+                    // We'll return what we have from the search result
+                } else {
+                    // Re-throw other errors (CAPTCHA, network, etc.)
+                    throw error;
+                }
+            }
+            
+            const { sender, receiver } = details ? normalizeSenderReceiver(details) : { sender: null, receiver: null };
+            const pkg = details ? normalizePackages(details) : { goods: null, packages: [] };
+            const tracking = details && trip ? normalizeTrackingHistory(details, trip) : { history: [], tripPoints: [] };
             const response: TrackingResult = {
                 ok: true,
                 reference,
@@ -140,10 +158,29 @@ export class DbSchenkerAdapter implements CarrierAdapter {
                     deliveryDate: details?.deliveryDate ?? null,
                     references: details?.references ?? null,
                 },
+                // Add metadata about what data was available
+                _metadata: {
+                    hasDetails: details !== null,
+                    hasTrip: trip !== null,
+                },
             };
             return response;
         }
         catch (error) {
+            // Handle invalid Captcha-Solution (422) - solution expired or invalid
+            if (error instanceof CaptchaSolutionInvalidError) {
+                const invalidSolutionPayload: TrackingResult = {
+                    ok: false,
+                    error: "CAPTCHA_SOLUTION_INVALID",
+                    message: "The Captcha-Solution header was rejected by the server. The solution may have expired.",
+                    reference,
+                    details: error.message,
+                    hint: "The Captcha-Solution header is time-sensitive and expires quickly. The server will automatically retry with a fresh solution.",
+                    retryable: true,
+                };
+                return invalidSolutionPayload;
+            }
+
             // Explicitly surface upstream CAPTCHA blocking with a structured, non-retryable
             // response so that downstream consumers can treat this as a hard system boundary.
             if (error instanceof CaptchaBlockedError) {

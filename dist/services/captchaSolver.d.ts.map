@@ -1,0 +1,1 @@
+{"version":3,"file":"captchaSolver.d.ts","sourceRoot":"","sources":["../../src/services/captchaSolver.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AA0LH;;;;;GAKG;AACH,wBAAsB,YAAY,CAAC,YAAY,EAAE,MAAM,GAAG,OAAO,CAAC,MAAM,CAAC,CAyBxE;AAED;;GAEG;AACH,wBAAgB,sBAAsB,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAiBhE;AAED;;GAEG;AACH,wBAAgB,qBAAqB,CAAC,YAAY,EAAE,MAAM,GAAG,MAAM,EAAE,CAGpE"}
