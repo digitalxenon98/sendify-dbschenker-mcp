@@ -8,7 +8,9 @@
  * 4. Shows the results
  *
  * Usage:
- *   DEBUG_CAPTCHA=1 npm run test-captcha-flow
+ *   npm run test-captcha-flow
+ *
+ * Note: Debug output is automatically enabled - you don't need to set DEBUG_CAPTCHA=1
  */
 import { DbSchenkerAdapter } from "./carriers/DbSchenkerAdapter.js";
 const TEST_REFERENCE = "1806203236";

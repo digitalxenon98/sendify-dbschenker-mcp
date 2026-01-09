@@ -8,7 +8,9 @@
  * 4. Shows the results
  *
  * Usage:
- *   DEBUG_CAPTCHA=1 npm run test-captcha-flow
+ *   npm run test-captcha-flow
+ *
+ * Note: Debug output is automatically enabled - you don't need to set DEBUG_CAPTCHA=1
  */
 export {};
 //# sourceMappingURL=test-captcha-flow.d.ts.map
